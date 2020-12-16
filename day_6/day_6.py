@@ -30,7 +30,6 @@ def main():
         return
     file_list = list(file_to_group_answers(sys.argv[1]))
     print("Times any answered yes:", count_any_in_group_answered_yes(file_list))
-
     print("Times all answered yes:", count_all_in_group_answered_yes(file_list))
 
 if __name__ == "__main__":

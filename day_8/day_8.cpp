@@ -104,13 +104,16 @@ std::vector<Instruction> file_vec_to_instructions(const std::vector<std::string>
 // Day 8 task logic
 class Interpreter {
     public:
-        Interpreter(std::vector<Instruction>&& instructions): instructions(instructions), acc(0), instruction_pointer(0) {}
+        Interpreter(std::vector<Instruction> instructions): instructions(instructions), acc(0), instruction_pointer(0) {}
 
-        int32_t execute() {
+        int32_t execute(bool test_mode = false) {
+            this->restart();
+
             while(instruction_pointer < instructions.size()) {
                 Instruction& current_instr = this->instructions[instruction_pointer];
-                if(current_instr.times_executed != 0)
-                    return acc;
+                if(current_instr.times_executed != 0) {
+                    return (test_mode) ? -1 : this->acc;
+                }
                 else current_instr.times_executed++;
 
                 if(current_instr.kind == InstructionKind::Acc)
@@ -124,19 +127,71 @@ class Interpreter {
 
             return this->acc;
         }
+
+        int32_t repair_and_execute() {
+            this->restart();
+
+            int32_t repaired_acc = -2;
+            size_t nop_or_jmp = 0;
+            repaired_acc = Interpreter(this->instructions).execute(true);
+            while(repaired_acc < 0) {
+                std::vector<Instruction> local_instrs { this->instructions };
+
+                int32_t supposed_nop_or_jmp = Interpreter::next_nop_or_jmp(local_instrs, nop_or_jmp);
+                if(supposed_nop_or_jmp != -1)
+                    nop_or_jmp = supposed_nop_or_jmp;
+                else break;
+
+                Interpreter::swap_nop_and_jmp_at(local_instrs, nop_or_jmp);
+                nop_or_jmp++;
+
+                Interpreter local_interp { local_instrs };
+                repaired_acc = local_interp.execute(true);
+            }
+
+            return repaired_acc;
+        }
     
     private:
+        void restart() {
+            this->acc = 0;
+            this->instruction_pointer = 0;
+            for(auto& instr : instructions) {
+                instr.times_executed = 0;
+            }
+        }
+
+        static int32_t next_nop_or_jmp(const std::vector<Instruction>& instrs, size_t offset) {
+            for(size_t counter = offset; counter < instrs.size(); counter++) {
+                if(instrs[counter].kind == InstructionKind::Jmp || 
+                   instrs[counter].kind == InstructionKind::Nop) {
+                    return counter;
+                }
+            }
+
+            return -1;
+        }
+
+        static void swap_nop_and_jmp_at(std::vector<Instruction>& local_instrs, size_t nop_or_jmp) {
+            if(local_instrs[nop_or_jmp].kind == InstructionKind::Nop)
+                local_instrs[nop_or_jmp].kind = InstructionKind::Jmp;
+            else if(local_instrs[nop_or_jmp].kind == InstructionKind::Jmp)
+                local_instrs[nop_or_jmp].kind = InstructionKind::Nop;
+            else
+                throw "swap_nop_and_jmp_at(): ERROR: expected Nop or Jmp!\n";
+        }
+
         std::vector<Instruction> instructions;
         int32_t acc;
         size_t instruction_pointer;
 };
 
 
-
 int main() {
     Interpreter interpreter { file_vec_to_instructions(file_to_vector(PUZZLE_INPUT)) };
 
-    std::cout << "Acc state after execution: " << interpreter.execute() << std::endl;
+    std::cout << "Exit when an instruction is repeated: " << interpreter.execute() << std::endl;
+    std::cout << "Repair corrupted instruction and execute: " << interpreter.repair_and_execute() << std::endl;
     
     return 0;
 }

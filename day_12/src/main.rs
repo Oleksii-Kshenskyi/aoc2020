@@ -36,6 +36,7 @@ impl Instruction {
     }
 }
 
+#[derive(Debug)]
 struct Waypoint {
     north_south_pos: i32,
     east_west_pos: i32,
@@ -56,7 +57,7 @@ impl Waypoint {
             _ => unreachable!("Waypoint::move_to(): This should have never happened")
         }
     }
-    pub fn turn(&mut self, side: InstrType, degrees: i32) {
+    pub fn turn(&mut self, side: &InstrType, degrees: i32) {
         let turn_val: i8 = (degrees / 90) as i8;
         match side {
             InstrType::R => self.transpose_turning(turn_val),
@@ -66,29 +67,43 @@ impl Waypoint {
     }
     fn transpose_turning(&mut self, turn_val: i8) {
         match turn_val {
-            1 => self.north_south_pos = -self.north_south_pos,
+            1 => {
+                std::mem::swap(&mut self.north_south_pos, &mut self.east_west_pos);
+                self.north_south_pos = -self.north_south_pos;
+            },
             2 => { 
                 self.north_south_pos = -self.north_south_pos;
                 self.east_west_pos = -self.east_west_pos;
             },
-            3 => self.east_west_pos = -self.east_west_pos,
-            -1 => self.east_west_pos = -self.east_west_pos,
+            3 => {
+                std::mem::swap(&mut self.north_south_pos, &mut self.east_west_pos);
+                self.east_west_pos = -self.east_west_pos;
+            },
+            -1 => {
+                std::mem::swap(&mut self.north_south_pos, &mut self.east_west_pos);
+                self.east_west_pos = -self.east_west_pos;
+            },
             -2 => { 
                 self.north_south_pos = -self.north_south_pos;
                 self.east_west_pos = -self.east_west_pos;
             },
-            -3 => self.north_south_pos = -self.north_south_pos,
+            -3 => {
+                std::mem::swap(&mut self.north_south_pos, &mut self.east_west_pos);
+                self.north_south_pos = -self.north_south_pos;
+            },
             _ => unreachable!("Waypoint::transpose_turning(): This should have never happened...")
         }
     }
 }
 
+#[derive(Debug)]
 struct Ship {
     instructions: Vec<Instruction>,
     north_south_pos: i32,
     east_west_pos: i32,
     facing: InstrType,
     waypoint: Waypoint,
+    kek: u32
 }
 impl Ship {
     pub fn new(instrs: Vec<Instruction>) -> Self {
@@ -98,6 +113,7 @@ impl Ship {
             east_west_pos: 0,
             facing: InstrType::E,
             waypoint: Waypoint::new(),
+            kek: 0
         }
     }
 
@@ -143,8 +159,8 @@ impl Ship {
             InstrType::S => self.go(&InstrType::S, instr.value),
             InstrType::E => self.go(&InstrType::E, instr.value),
             InstrType::W => self.go(&InstrType::W, instr.value),
-            InstrType::L => self.turn(InstrType::L, instr.value),
-            InstrType::R => self.turn(InstrType::R, instr.value),
+            InstrType::L => self.turn(&InstrType::L, instr.value),
+            InstrType::R => self.turn(&InstrType::R, instr.value),
             InstrType::F => self.go(&self.facing.clone(), instr.value),
         }
     }
@@ -155,8 +171,8 @@ impl Ship {
             InstrType::S => self.waypoint.move_to(&InstrType::S, instr.value),
             InstrType::E => self.waypoint.move_to(&InstrType::E, instr.value),
             InstrType::W => self.waypoint.move_to(&InstrType::W, instr.value),
-            InstrType::L => self.waypoint.turn(InstrType::L, instr.value),
-            InstrType::R => self.waypoint.turn(InstrType::R, instr.value),
+            InstrType::L => self.waypoint.turn(&InstrType::L, instr.value),
+            InstrType::R => self.waypoint.turn(&InstrType::R, instr.value),
             InstrType::F => self.follow_waypoint_times(instr.value),
         }
     }
@@ -166,7 +182,7 @@ impl Ship {
         self.east_west_pos += self.waypoint.east_west_pos * times;
     }
 
-    fn turn(&mut self, side: InstrType, degrees: i32) {
+    fn turn(&mut self, side: &InstrType, degrees: i32) {
         let turn_val: i8 = (degrees / 90) as i8;
         match side {
             InstrType::R => self.facing = Ship::i8_to_dir((Ship::dir_to_i8(&self.facing) + turn_val) % 4),

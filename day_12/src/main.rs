@@ -1,5 +1,4 @@
 use std::path::Path;
-use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 enum InstrType {
@@ -37,25 +36,68 @@ impl Instruction {
     }
 }
 
+struct Waypoint {
+    north_south_pos: i32,
+    east_west_pos: i32,
+}
+impl Waypoint {
+    pub fn new() -> Self {
+        Self {
+            north_south_pos: 1,
+            east_west_pos: 10,
+        }
+    }
+    pub fn move_to(&mut self, dir: &InstrType, val: i32) {
+        match dir {
+            InstrType::N => self.north_south_pos += val,
+            InstrType::E => self.east_west_pos += val,
+            InstrType::S => self.north_south_pos -= val,
+            InstrType::W => self.east_west_pos -= val,
+            _ => unreachable!("Waypoint::move_to(): This should have never happened")
+        }
+    }
+    pub fn turn(&mut self, side: InstrType, degrees: i32) {
+        let turn_val: i8 = (degrees / 90) as i8;
+        match side {
+            InstrType::R => self.transpose_turning(turn_val),
+            InstrType::L => self.transpose_turning(-turn_val),
+            _ => unreachable!("Waypoint::turn(): This should have never happened...")
+        }
+    }
+    fn transpose_turning(&mut self, turn_val: i8) {
+        match turn_val {
+            1 => self.north_south_pos = -self.north_south_pos,
+            2 => { 
+                self.north_south_pos = -self.north_south_pos;
+                self.east_west_pos = -self.east_west_pos;
+            },
+            3 => self.east_west_pos = -self.east_west_pos,
+            -1 => self.east_west_pos = -self.east_west_pos,
+            -2 => { 
+                self.north_south_pos = -self.north_south_pos;
+                self.east_west_pos = -self.east_west_pos;
+            },
+            -3 => self.north_south_pos = -self.north_south_pos,
+            _ => unreachable!("Waypoint::transpose_turning(): This should have never happened...")
+        }
+    }
+}
+
 struct Ship {
     instructions: Vec<Instruction>,
     north_south_pos: i32,
     east_west_pos: i32,
     facing: InstrType,
+    waypoint: Waypoint,
 }
 impl Ship {
     pub fn new(instrs: Vec<Instruction>) -> Self {
-        let mut the_dir_map: HashMap<InstrType, i8> = HashMap::new();
-        the_dir_map.insert(InstrType::N, 0);
-        the_dir_map.insert(InstrType::E, 1);
-        the_dir_map.insert(InstrType::S, 2);
-        the_dir_map.insert(InstrType::W, 3);
-
         Self {
             instructions: instrs,
             north_south_pos: 0,
             east_west_pos: 0,
             facing: InstrType::E,
+            waypoint: Waypoint::new(),
         }
     }
 
@@ -70,8 +112,29 @@ impl Ship {
         self
     }
 
+    pub fn follow_set_waypoint(&mut self) -> &mut Self {
+        let instrs = self.instructions.clone();
+        instrs.iter().for_each(
+            |instr| {
+                self.follow_single_waypoint(instr.clone());
+            }
+        );
+
+        self
+    }
+
     pub fn manhattan(&self) -> i32 {
         self.north_south_pos.abs() + self.east_west_pos.abs()
+    }
+
+    pub fn reboot(&mut self) -> &mut Self {
+        self.north_south_pos = 0;
+        self.east_west_pos = 0;
+        self.facing = InstrType::E;
+        self.waypoint.east_west_pos = 10;
+        self.waypoint.north_south_pos = 1;
+
+        self
     }
 
     fn follow_single(&mut self, instr: Instruction) {
@@ -86,6 +149,23 @@ impl Ship {
         }
     }
 
+    fn follow_single_waypoint(&mut self, instr: Instruction) {
+        match instr.itype {
+            InstrType::N => self.waypoint.move_to(&InstrType::N, instr.value),
+            InstrType::S => self.waypoint.move_to(&InstrType::S, instr.value),
+            InstrType::E => self.waypoint.move_to(&InstrType::E, instr.value),
+            InstrType::W => self.waypoint.move_to(&InstrType::W, instr.value),
+            InstrType::L => self.waypoint.turn(InstrType::L, instr.value),
+            InstrType::R => self.waypoint.turn(InstrType::R, instr.value),
+            InstrType::F => self.follow_waypoint_times(instr.value),
+        }
+    }
+
+    fn follow_waypoint_times(&mut self, times: i32) {
+        self.north_south_pos += self.waypoint.north_south_pos * times;
+        self.east_west_pos += self.waypoint.east_west_pos * times;
+    }
+
     fn turn(&mut self, side: InstrType, degrees: i32) {
         let turn_val: i8 = (degrees / 90) as i8;
         match side {
@@ -94,7 +174,7 @@ impl Ship {
             _ => unreachable!("turn(): This should have never happened...")
         }
     }
-    fn dir_to_i8(dir: &InstrType) -> i8 {
+    pub fn dir_to_i8(dir: &InstrType) -> i8 {
         match dir {
             InstrType::N => 0,
             InstrType::E => 1,
@@ -103,7 +183,7 @@ impl Ship {
             _ => unreachable!("dir_to_i8(): This should have never happened...")
         }
     }
-    fn i8_to_dir(i8_val: i8) -> InstrType {
+    pub fn i8_to_dir(i8_val: i8) -> InstrType {
         match i8_val {
             0 => InstrType::N,
             1 => InstrType::E,
@@ -145,8 +225,12 @@ fn lines_to_instructions(lines :Vec<String>) -> Vec<Instruction> {
 
 fn main() {
     let filename: &str = &std::env::args().nth(1).expect("ERROR: no filename given!");
-    let manhattan = Ship::new(lines_to_instructions(file_to_lines(filename)))
+    let mut ship = Ship::new(lines_to_instructions(file_to_lines(filename)));
+    let manhattan = ship
         .follow_set()
         .manhattan();
     println!("Part 1: manhattan distance after instructions: {}", manhattan);
+
+    let manhattan = ship.reboot().follow_set_waypoint().manhattan();
+    println!("Part 2: manhattan distance after following waypoint: {}", manhattan);
 }

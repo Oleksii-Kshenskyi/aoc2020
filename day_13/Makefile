@@ -1,4 +1,4 @@
-INPUTS=sample.txt puzzle_input.txt
+INPUTS=sample.txt sample2.txt sample3.txt sample4.txt sample5.txt sample6.txt puzzle_input.txt
 
 all: compile run
 

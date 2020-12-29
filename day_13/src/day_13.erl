@@ -34,8 +34,20 @@ solve_part_1(EarliestT, BusIDs) -> solve_part_1(EarliestT, EarliestT, BusIDs, Bu
 
 part1_solution_from_bus_crap_1(Crap) -> solve_part_1(Crap#bus_crap_1.earliestT, Crap#bus_crap_1.busIDs).
 
+check_timestamp_or_false(_, _, _, []) -> true;
+check_timestamp_or_false(Timestamp, ID, Offset, _) when (Timestamp + Offset) rem ID =/= 0 -> false;
+check_timestamp_or_false(Timestamp, _, _, CRAPTAIL) -> is_timestamp_the_solution(Timestamp, CRAPTAIL).
+is_timestamp_the_solution(Timestamp, [CRAPHEAD|CRAPTAIL]) ->
+    {ID, Offset} = {CRAPHEAD#bus_crap_2.busID, CRAPHEAD#bus_crap_2.offset},
+    check_timestamp_or_false(Timestamp, ID, Offset, CRAPTAIL).
+
+
 part2_solution_from_bus_crap_2(Crap) ->
-    Crap.
+    is_timestamp_the_solution(3417, Crap).
+
+
+
+
 
 part_1(Contents) ->
     BusCrap = bus_crap_for_part_1_from_file(Contents),
@@ -44,7 +56,7 @@ part_1(Contents) ->
 
 part_2(Contents) ->
     BusCrap = bus_crap_for_part_2_from_file(Contents),
-    io:format("Part 2: Earliest timestump with subsequent departures: ~p;~n",
+    io:format("Part 2: Earliest timestamp with subsequent departures: ~p;~n",
               [part2_solution_from_bus_crap_2(BusCrap)]).
 
 solve_file(Filename) ->
@@ -56,7 +68,5 @@ solve_file(Filename) ->
 solve_all([]) -> ok;
 solve_all([Name|Tail]) -> solve_file(Name), solve_all(Tail).
 
-main(Args) ->
-    solve_all(Args),
-    erlang:halt(0).
+main(Args) -> solve_all(Args).
 

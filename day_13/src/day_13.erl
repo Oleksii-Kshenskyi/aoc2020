@@ -32,8 +32,19 @@ solve_part_1(EarliestT, CurrentT, _, [BIH|_]) when CurrentT rem BIH == 0 -> (Cur
 solve_part_1(EarliestT, CurrentT, BusIDs, [_|BIT]) -> solve_part_1(EarliestT, CurrentT, BusIDs, BIT).
 solve_part_1(EarliestT, BusIDs) -> solve_part_1(EarliestT, EarliestT, BusIDs, BusIDs).
 
+
+solve_part_2(Timestamp, Step, BusCrap) ->
+    case is_timestamp_the_solution(Timestamp, BusCrap) of
+        true -> Timestamp;
+        false -> solve_part_2(Timestamp + Step, 1, BusCrap)
+    end.
+solve_part_2(Timestamp, BusCrap) -> solve_part_2(Timestamp, 1, BusCrap).
+
+
+
 part1_solution_from_bus_crap_1(Crap) -> solve_part_1(Crap#bus_crap_1.earliestT, Crap#bus_crap_1.busIDs).
 
+check_timestamp_or_false(Timestamp, ID, Offset, []) when (Timestamp + Offset) rem ID =/= 0 -> false;
 check_timestamp_or_false(_, _, _, []) -> true;
 check_timestamp_or_false(Timestamp, ID, Offset, _) when (Timestamp + Offset) rem ID =/= 0 -> false;
 check_timestamp_or_false(Timestamp, _, _, CRAPTAIL) -> is_timestamp_the_solution(Timestamp, CRAPTAIL).
@@ -42,8 +53,8 @@ is_timestamp_the_solution(Timestamp, [CRAPHEAD|CRAPTAIL]) ->
     check_timestamp_or_false(Timestamp, ID, Offset, CRAPTAIL).
 
 
-part2_solution_from_bus_crap_2(Crap) ->
-    is_timestamp_the_solution(3417, Crap).
+
+part2_solution_from_bus_crap_2(Crap) -> solve_part_2(1, Crap).
 
 
 

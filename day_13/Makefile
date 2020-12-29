@@ -1,8 +1,8 @@
-INPUTS=sample.txt sample2.txt sample3.txt sample4.txt sample5.txt sample6.txt puzzle_input.txt
+INPUTS=sample.txt sample2.txt sample3.txt sample4.txt sample5.txt sample6.txt #puzzle_input.txt
 
-all: compile run
+all: clean compile run
 
-clean: _build day_13
+clean:
 	rm -rf _build day_13
 
 compile:
